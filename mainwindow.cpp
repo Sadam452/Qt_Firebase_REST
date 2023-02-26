@@ -9,6 +9,7 @@
 #include <QJsonArray>
 #include <QString>
 #include <QDebug>
+#include <QSettings>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -16,6 +17,16 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    QSettings settings("Firebase", "Qt");
+    settings.beginGroup("user");
+    if(settings.value("loggedIn").toString() == "true"){
+        ui->textBrowser->setHtml("Welcome <b>"+settings.value("name").toString()+" </b>You are already\nlogged in as <b>"+settings.value("email").toString()+"</b>");
+        ui->lineEdit->setText("Logged in at "+settings.value("time").toString());
+        ui->lineEdit_2->setVisible(false);
+        ui->lineEdit_3->setVisible(false);
+        ui->pushButton->setText("Logout");
+    }
+    settings.endGroup();
 }
 
 MainWindow::~MainWindow()
@@ -28,6 +39,15 @@ void MainWindow::on_pushButton_clicked()
 {
     if(ui->pushButton->text() == "Logout"){
         //logout code
+        QSettings settings("Firebase", "Qt");
+        settings.beginGroup("user");
+        settings.remove("");
+        settings.endGroup();
+        ui->textBrowser->setText("Successfully logged out of the application.");
+        ui->lineEdit->setText("Logged out at "+QTime::currentTime().toString());
+        ui->lineEdit_2->setVisible(true);
+        ui->lineEdit_3->setVisible(true);
+        ui->pushButton->setText("Login");
         return;
     }
     m_accessmanager = new QNetworkAccessManager();
@@ -55,11 +75,18 @@ void MainWindow::replyReady(){
 
     QString name = checkCredentials(email, pass);
     if (!name.isEmpty()) {
-        ui->textBrowser->setText("Welcome "+name+" You are successfully\n logged in as "+email);
+        ui->textBrowser->setHtml("Welcome <b>"+name+" </b>You are successfully\nlogged in as <b>"+email+"</b>");
         ui->lineEdit->setText("Logged in at "+QTime::currentTime().toString());
         ui->lineEdit_2->setVisible(false);
         ui->lineEdit_3->setVisible(false);
         ui->pushButton->setText("Logout");
+        QSettings settings("Firebase", "Qt");
+        settings.beginGroup("user");
+        settings.setValue("name", name);
+        settings.setValue("email", email);
+        settings.setValue("time", QTime::currentTime().toString());
+        settings.setValue("loggedIn", "true");
+        settings.endGroup();
     } else {
         QMessageBox::information(this, "Error", "Invalid email or password!", 0);
         return;
